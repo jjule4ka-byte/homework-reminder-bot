@@ -1,10 +1,12 @@
-"""Бот-напоминалка для MAX.
+"""MAX-бот для напоминаний 5 «А».
 
 Логика:
 1. Пользователь запускает бота или пишет ему.
-2. Пользователь автоматически добавляется в подписчики.
-3. При первом запуске бот отправляет приветственное сообщение.
-4. Подписчики получают напоминания.
+2. Новый пользователь автоматически становится подписчиком.
+3. При запуске бот отправляет приветствие.
+4. Команда «Отписаться» отключает напоминания.
+5. Команда «Подписаться» включает их обратно.
+6. В режиме send бот рассылает напоминание всем подписчикам.
 """
 
 import os
@@ -21,12 +23,23 @@ MODE = os.environ.get("MODE", "send")
 
 TEXT = os.environ.get(
     "REMINDER_TEXT",
-    "Напоминаю: пожалуйста, отправьте домашнее задание 5 «А» в электронный журнал или в чат с родителями. Спасибо!",
+    "Напоминаю: пожалуйста, отправьте домашнее задание 5 «А» "
+    "в электронный журнал или в чат с родителями. Спасибо!",
 )
 
 WELCOME = (
     "Здравствуйте! 👋\n\n"
-    "Вы подписаны на напоминания о домашнем задании для 5 «А»."
+    "Этот бот будет напоминать о домашнем задании для 5 «А».\n\n"
+    "Если захотите отключить напоминания — напишите «Отписаться»."
+)
+
+UNSUBSCRIBED = (
+    "Готово, вы отписаны от напоминаний.\n\n"
+    "Если захотите вернуться — напишите «Подписаться»."
+)
+
+SUBSCRIBED = (
+    "Готово! Вы снова подписаны на напоминания для 5 «А» 👌"
 )
 
 API = "https://platform-api2.max.ru"
@@ -99,7 +112,7 @@ users = load(
     },
 )
 
-# На случай, если users.json остался от старой версии бота.
+# Поддержка старого users.json
 users["subscribers"] = [
     str(uid) for uid in users.get("subscribers", [])
 ]
@@ -112,7 +125,7 @@ users["names"] = {
 users.setdefault("marker", None)
 
 
-# ---------- 1. Забираем новые сообщения ----------
+# ---------- 1. Получаем новые события из MAX ----------
 
 params = {
     "limit": 100,
@@ -145,8 +158,9 @@ for update in upd.get("updates", []):
 
     uid = None
     name = None
+    text = ""
 
-    # Пользователь нажал «Начать».
+    # Пользователь нажал «Начать»
     if update_type == "bot_started":
 
         user = update.get("user") or {}
@@ -154,14 +168,16 @@ for update in upd.get("updates", []):
         uid = user.get("user_id")
         name = user.get("name") or user.get("first_name")
 
-    # Пользователь написал сообщение.
+    # Пользователь отправил сообщение
     elif update_type == "message_created":
 
         message = update.get("message") or {}
         sender = message.get("sender") or {}
+        body = message.get("body") or {}
 
         uid = sender.get("user_id")
         name = sender.get("name") or sender.get("first_name")
+        text = (body.get("text") or "").strip().lower()
 
     else:
         continue
@@ -174,29 +190,64 @@ for update in upd.get("updates", []):
     if name:
         users["names"][uid] = name
 
-    # Новый пользователь.
+    # ---------- Отписка ----------
+
+    if text in (
+        "отписаться",
+        "отпишите меня",
+        "отписка",
+    ):
+        if uid in users["subscribers"]:
+            users["subscribers"].remove(uid)
+
+        send(uid, UNSUBSCRIBED)
+        continue
+
+    # ---------- Повторная подписка ----------
+
+    if text in (
+        "подписаться",
+        "подпишите меня",
+        "подписка",
+    ):
+        if uid not in users["subscribers"]:
+            users["subscribers"].append(uid)
+
+        send(uid, SUBSCRIBED)
+        continue
+
+    # ---------- Запуск бота ----------
+
+    if update_type == "bot_started":
+
+        if uid not in users["subscribers"]:
+            users["subscribers"].append(uid)
+
+        send(uid, WELCOME)
+        continue
+
+    # ---------- Первое обычное сообщение ----------
+
     if uid not in users["subscribers"]:
-
         users["subscribers"].append(uid)
-
         send(uid, WELCOME)
 
 
+# Сохраняем marker, чтобы не обрабатывать старые события повторно
 if upd.get("marker") is not None:
     users["marker"] = upd["marker"]
 
 
 save("users.json", users)
 
-print(
-    f"Подписчиков: {len(users['subscribers'])}"
-)
+print(f"Подписчиков: {len(users['subscribers'])}")
 
 
-# ---------- 2. Рассылка ----------
+# ---------- 2. Рассылка напоминаний ----------
 
 if MODE == "send":
 
+    # В субботу и воскресенье ничего не отправляем
     if datetime.now(MSK).weekday() >= 5:
         print("Выходной — рассылка не выполняется.")
         sys.exit(0)
