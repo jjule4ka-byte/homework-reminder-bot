@@ -126,10 +126,6 @@ elif any(w in text for w in DECLINE_WORDS):
     send(uid, DECLINED)
 else:
     send(uid, "Напишите, пожалуйста, «Да, согласен» для подписки или «Нет» для отказа.")
-    del pending[uid_key]
-    send(uid, DECLINED)
-else:
-    send(uid, "Напишите, пожалуйста, «Да, согласен» для подписки или «Нет» для отказа.")
 
 if upd.get("marker") is not None:
     users["marker"] = upd["marker"]
