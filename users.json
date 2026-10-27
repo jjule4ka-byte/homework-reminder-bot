@@ -1,6 +1,10 @@
 {
   "subscribers": [],
-  "pending": {},
-  "names": {},
-  "marker": 39169
+  "pending": {
+    "13479993": "asked"
+  },
+  "names": {
+    "13479993": "Юлия"
+  },
+  "marker": 39179
 }
