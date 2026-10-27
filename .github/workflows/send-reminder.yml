@@ -1,7 +1,7 @@
 name: send-reminder
 on:
   schedule:
-    - cron: '0 12 * * 1-5'     # 15:00 МСК, пн–пт
+    - cron: '30 11 * * 1-5'   # 14:30 МСК, пн-пт
   workflow_dispatch: {}
 
 permissions:
