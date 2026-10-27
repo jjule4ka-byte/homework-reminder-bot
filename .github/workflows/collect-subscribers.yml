@@ -1,5 +1,4 @@
 name: collect-subscribers
-
 on:
   schedule:
     - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
@@ -11,14 +10,11 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Install MAX trusted root certificate
         shell: bash
         run: |
