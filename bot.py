@@ -68,7 +68,7 @@ def api_request(method, path, body=None, params=None):
 
 def send(user_id, text):
     try:
-        api_request("PUT", "/messages", body={"text": text}, params={"user_id": user_id})
+        api_request("POST", "/messages", body={"text": text}, params={"user_id": user_id})
         return True
     except Exception as e:
         print(f"Ошибка отправки {user_id}: {e}")
