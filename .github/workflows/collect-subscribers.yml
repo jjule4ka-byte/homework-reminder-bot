@@ -1,7 +1,7 @@
 name: collect-subscribers
 on:
   schedule:
-    - cron: '3,18,33,48 * * * *'
+    - cron: '13,43 * * * *'
   workflow_dispatch: {}
 
 permissions:
