@@ -102,16 +102,16 @@ for u in upd.get("updates", []):
     if uid is None:
         continue
     if name:
-        users["names"][str(uid)] = name
-    pending = users["pending"]
+    users["names"][str(uid)] = name
 
-    if uid in users["subscribers"]:
-        if any(w in text for w in DECLINE_WORDS):
-            users["subscribers"].remove(uid)
-            send(uid, "Вы отписаны. Напоминания больше приходить не будут.")
-        continue
+pending = users["pending"]
+uid_key = str(uid)
 
-   uid_key = str(uid)
+if uid in users["subscribers"]:
+    if any(w in text for w in DECLINE_WORDS):
+        users["subscribers"].remove(uid)
+        send(uid, "Вы отписаны. Напоминания больше приходить не будут.")
+    continue
 
 if uid_key not in pending:
     pending[uid_key] = "asked"
@@ -122,6 +122,10 @@ elif text.startswith("да") or "соглас" in text:
     consents.append({"user_id": uid, "name": name, "date": now})
     send(uid, WELCOME)
 elif any(w in text for w in DECLINE_WORDS):
+    del pending[uid_key]
+    send(uid, DECLINED)
+else:
+    send(uid, "Напишите, пожалуйста, «Да, согласен» для подписки или «Нет» для отказа.")
     del pending[uid_key]
     send(uid, DECLINED)
 else:
