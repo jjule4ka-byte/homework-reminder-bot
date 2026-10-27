@@ -1,4 +1,5 @@
 name: send-reminder
+
 on:
   schedule:
     - cron: '30 11 * * 1-5'   # 14:30 МСК, пн-пт
@@ -8,19 +9,43 @@ permissions:
   contents: write
 
 jobs:
-  collect:
+  send:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Collect new subscribers
+
+      - name: Install MAX trusted root certificate
+        shell: bash
+        run: |
+          CERT_PATH="/usr/local/share/ca-certificates/russian_trusted_root_ca.crt"
+
+          sudo curl -kfsSL \
+            "https://gu-st.ru/content/lending/russian_trusted_root_ca_pem.crt" \
+            -o "$CERT_PATH"
+
+          ACTUAL_FINGERPRINT="$(openssl x509 -in "$CERT_PATH" -noout -fingerprint -sha256 | cut -d= -f2)"
+
+          if [ "$ACTUAL_FINGERPRINT" != "D2:6D:2D:02:31:B7:C3:9F:92:CC:73:85:12:BA:54:10:35:19:E4:40:5D:68:B5:BD:70:3E:97:88:CA:8E:CF:31" ]; then
+            echo "Certificate fingerprint mismatch"
+            echo "Expected: D2:6D:2D:02:31:B7:C3:9F:92:CC:73:85:12:BA:54:10:35:19:E4:40:5D:68:B5:BD:70:3E:97:88:CA:8E:CF:31"
+            echo "Actual:   $ACTUAL_FINGERPRINT"
+            exit 1
+          fi
+
+          sudo update-ca-certificates
+
+      - name: Send reminder
         env:
           MAX_BOT_TOKEN: ${{ secrets.MAX_BOT_TOKEN }}
           MODE: send
           REMINDER_TEXT: ${{ vars.REMINDER_TEXT }}
         run: python bot.py
+
       - name: Save data
         run: |
           git config user.name "bot"
