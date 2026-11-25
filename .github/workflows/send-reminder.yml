@@ -1,7 +1,7 @@
 name: send-reminder
 on:
   schedule:
-    - cron: '32 11 * * 1-5'
+    - cron: '32 10 * * 1-5'
   workflow_dispatch: {}
 
 permissions:
